@@ -1,7 +1,9 @@
+from re import I
 from dotenv import load_dotenv
 import os, uuid
 import glob
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient, __version__
+from tqdm import tqdm
 load_dotenv()
 
 
@@ -51,21 +53,42 @@ class BlobController:
         # Create a blob client using the local file name as the name for the blob
         #blob_client = blob_service_client.get_blob_client(container=container_name, blob=os.getenv("LOCAL_FILE_NAME"))
 
-    def upload_data_to_blob_container(self, container_name, n_files=None, n_files_type=None): 
+    def upload_data_to_blob_container(self, container_name, n_files=False, n_files_type=None): 
 
         '''
         upload LOCAL_FILE_NAME from PATH_BLOB_DATA into container_name.
         '''
 
-        #CREATE A CONTAINER AND UPLOAD DATA TO BLOB
-        upload_file_path = os.path.join(os.getenv("PATH_BLOB_DATA"), os.getenv("LOCAL_FILE_NAME"))
 
-        # Create a blob client using the local file name as the name for the blob
-        blob_client = self.blob_service_client.get_blob_client(container=container_name, blob=os.getenv("LOCAL_FILE_NAME"))
+        if n_files:
+            #padrao linux:   pattern_to_upload = os.getenv('PATH_BLOB_DATA') + '/*.' + n_files_type
+            #padrao windows com \\, colocar o path inteiro na variavel ambiente e r'' \\server\folder/*.CSV
 
-        # Upload the created file
-        with open(upload_file_path, "rb") as data:
-            blob_client.upload_blob(data)
+            pattern_to_upload = eval(os.getenv('PATH_BLOB_DATA_FULL'))
+            list_full_path_files = glob.glob(pattern_to_upload)
+            list_files = os.listdir(eval(os.getenv('PATH_BLOB_DATA'))) 
+
+            # Create a blob client using the local file name as the name for the blob
+            i = 0
+            for file_name in tqdm(list_files):
+                blob_client = self.blob_service_client.get_blob_client(container=container_name, blob=file_name)
+
+                # Upload the created file
+                with open(list_full_path_files[i], "rb") as data:
+                    blob_client.upload_blob(data)
+                i += 1
+
+        else:
+
+            #CREATE A CONTAINER AND UPLOAD DATA TO BLOB
+            upload_file_path = os.path.join(os.getenv("PATH_BLOB_DATA"), os.getenv("LOCAL_FILE_NAME"))
+
+            # Create a blob client using the local file name as the name for the blob
+            blob_client = self.blob_service_client.get_blob_client(container=container_name, blob=os.getenv("LOCAL_FILE_NAME"))
+
+            # Upload the created file
+            with open(upload_file_path, "rb") as data:
+                blob_client.upload_blob(data)
 
 
 if __name__ == "__main__":
